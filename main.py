@@ -550,7 +550,7 @@ def main() -> None:
                 log_info(f"Posting {len(all_comments)} review comments")
 
             # Get latest commit efficiently using reversed iteration
-            latest_commit = next(pr.get_commits().reversed)
+            latest_commit = next(iter(pr.get_commits().reversed))
 
             # Create review with comments
             pr.create_review(
