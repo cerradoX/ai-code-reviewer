@@ -2,13 +2,45 @@
 
 GitHub Action customizada que usa a API da OpenAI para revisar pull requests e fornecer sugestões inline.
 
+## Status do Projeto
+
+**Versão:** 1.0.0
+**Status:** ✅ Funcional e pronto para uso
+**Última atualização:** 10 de Fevereiro de 2026
+
+### Funcionalidades Implementadas
+
+- ✅ Revisão automatizada de código usando OpenAI API (gpt-5.2)
+- ✅ Comentários inline em pull requests com blocos de sugestão
+- ✅ Suporte a arquivo de regras configurável (`.cursor/rules/RULE.mdc` ou customizado)
+- ✅ Notificação inicial automática ao iniciar revisão (configurável)
+- ✅ Parsing de diffs com `whatthepatch`
+- ✅ Validação de linhas adicionadas para comentários precisos
+- ✅ Structured outputs com Pydantic para respostas consistentes
+- ✅ Logs informativos e modo debug
+- ✅ Gerenciamento de dependências com `uv`
+- ✅ Suporte a Python 3.12+
+
+### Tecnologias
+
+- **Python:** 3.12+
+- **Gerenciamento de Dependências:** uv
+- **APIs:** OpenAI API, GitHub API
+- **Bibliotecas principais:**
+  - `PyGithub` (2.5.0+) - Interação com GitHub API
+  - `openai` (2.18.0) - Cliente OpenAI com structured outputs
+  - `whatthepatch` (1.0.6+) - Parsing de diffs
+  - `pydantic` (2.10.6+) - Validação e estruturação de dados
+
 ## Características
 
 - 🤖 Revisa diffs de pull requests usando modelos GPT da OpenAI
 - 💬 Posta comentários inline com sugestões
-- 📋 Lê e segue regras específicas do projeto em `.cursor/rules/RULE.mdc`
+- 📋 Lê e segue regras específicas do projeto (configurável e opcional)
 - ✨ Suporta blocos de sugestão do GitHub para mudanças fáceis de código
 - 🎯 Foco em: qualidade de código, melhores práticas, bugs potenciais, performance e segurança
+- 🔔 Notificação inicial automática (pode ser desabilitada)
+- 🛠️ Sistema de mensagens customizáveis e extensível
 
 ## Uso
 
@@ -33,7 +65,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: AI Code Review
         uses: cerradoX/ai-code-reviewer@main
         with:
@@ -49,7 +81,7 @@ jobs:
   with:
     github_token: ${{ secrets.GITHUB_TOKEN }}
     openai_api_key: ${{ secrets.OPENAI_API_KEY }}
-    openai_code_review_model: 'gpt-4o'
+    openai_code_review_model: 'gpt-5.2'
     system_message: |
       Você é um revisor especialista em segurança.
       Foque especialmente em vulnerabilidades e práticas de segurança.
@@ -151,6 +183,21 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 uv sync
 ```
 
+### Estrutura do Projeto
+
+```
+ai-code-reviewer/
+├── main.py                 # Script principal da action
+├── action.yml              # Definição da GitHub Action
+├── pyproject.toml          # Configuração do projeto e dependências
+├── uv.lock                 # Lock file de dependências
+├── .github/
+│   └── workflows/
+│       └── example.yaml    # Exemplo de workflow
+├── LICENSE
+└── README.md
+```
+
 ### Atualizar Dependências
 
 ```bash
@@ -171,7 +218,7 @@ Você pode testar a action localmente configurando variáveis de ambiente:
 ```bash
 export INPUT_GITHUB_TOKEN="seu_token"
 export INPUT_OPENAI_API_KEY="sua_chave"
-export INPUT_OPENAI_CODE_REVIEW_MODEL="gpt-4o"
+export INPUT_OPENAI_CODE_REVIEW_MODEL="gpt-5.2"
 export INPUT_DEBUG="true"
 export GITHUB_EVENT_PATH="caminho/para/event.json"
 export GITHUB_WORKSPACE="caminho/para/workspace"
@@ -228,7 +275,7 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           openai_api_key: ${{ secrets.OPENAI_API_KEY }}
-          openai_code_review_model: "gpt-4o"
+          openai_code_review_model: "gpt-5.2"
           debug: "false"
 ```
 
