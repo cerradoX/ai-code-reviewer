@@ -21,10 +21,23 @@ inputs:
     description: 'Enable debug mode'
     required: false
     default: 'false'
+  post_initial_comment:
+    description: 'Post initial comment to PR notifying review has started'
+    required: false
+    default: 'true'
 
 runs:
   using: 'composite'
   steps:
+    - name: Post initial notification
+      if: ${{ inputs.post_initial_comment == 'true' }}
+      shell: bash
+      run: |
+        gh pr comment ${{ github.event.pull_request.number }} \
+          --body "🤖 **IA Agent:** Iniciando a revisão do seu código... Aguarde as sugestões."
+      env:
+        GITHUB_TOKEN: ${{ inputs.github_token }}
+
     - name: Setup Python
       uses: actions/setup-python@v5
       with:
