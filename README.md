@@ -54,6 +54,7 @@ jobs:
       Você é um revisor especialista em segurança.
       Foque especialmente em vulnerabilidades e práticas de segurança.
     debug: 'false'
+    post_initial_comment: 'true'  # Opcional: desabilite para não postar comentário inicial
 ```
 
 ## Inputs
@@ -65,6 +66,7 @@ jobs:
 | `openai_code_review_model` | Não | `gpt-5.2` | Modelo para revisão detalhada |
 | `system_message` | Não | - | Mensagem de sistema customizada com instruções de revisão |
 | `debug` | Não | `false` | Habilita logs de debug |
+| `post_initial_comment` | Não | `true` | Posta comentário inicial notificando o início da revisão |
 
 ## Configuração de Secrets
 

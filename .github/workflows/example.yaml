@@ -21,14 +21,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Avisar início da revisão
-        if: ${{ github.event.action == 'opened' || github.event.action == 'reopened' }}
-        run: |
-          gh pr comment ${{ github.event.pull_request.number }} \
-            --body "🤖 **IA Agent:** Iniciando a revisão do seu código... Aguarde as sugestões."
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: AI Code Review
         uses: cerradoX/ai-code-reviewer@main
         with:
