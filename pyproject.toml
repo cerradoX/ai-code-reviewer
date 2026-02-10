@@ -1,0 +1,15 @@
+[project]
+name = "ai-code-reviewer"
+version = "1.0.0"
+description = "Custom AI code reviewer action using OpenAI"
+requires-python = ">=3.12"
+dependencies = [
+    "PyGithub>=2.5.0",
+    "openai==2.18.0",
+    "whatthepatch>=1.0.6",
+    "requests>=2.32.3",
+    "pydantic>=2.10.6",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = []

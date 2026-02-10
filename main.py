@@ -1,0 +1,408 @@
+#!/usr/bin/env python3
+"""AI Code Reviewer GitHub Action.
+
+This action reviews pull requests using OpenAI API and posts inline suggestions.
+"""
+
+import json
+import os
+import sys
+from pathlib import Path
+from typing import Any
+
+import requests
+import whatthepatch
+from github import Auth, Github
+from openai import OpenAI
+from pydantic import BaseModel, Field
+
+
+class ReviewComment(BaseModel):
+    """A single code review comment."""
+
+    file: str = Field(description="Path to the file being reviewed")
+    line: int = Field(description="Line number in the new file where the comment applies")
+    comment: str = Field(
+        description="The review comment or suggestion. Use markdown with ```suggestion blocks for code suggestions."
+    )
+
+
+class CodeReview(BaseModel):
+    """Collection of code review comments."""
+
+    comments: list[ReviewComment] = Field(
+        default_factory=list, description="List of review comments for the file"
+    )
+
+
+def get_input(name: str, required: bool = False, default: str = "") -> str:
+    """Get input value from environment variables.
+
+    Args:
+        name(str): Input name
+        required(bool): Whether the input is required. Defaults to False.
+        default(str): Default value if input not found. Defaults to "".
+
+    Returns:
+        str: Input value
+
+    Raises:
+        ValueError: If required input is not found
+    """
+    env_name = f"INPUT_{name.upper()}"
+    value = os.environ.get(env_name, default)
+
+    if required and not value:
+        raise ValueError(f"Input '{name}' is required but not provided")
+
+    return value
+
+
+def log_info(message: str) -> None:
+    """Log info message."""
+    print(f"::notice::{message}")
+
+
+def log_warning(message: str) -> None:
+    """Log warning message."""
+    print(f"::warning::{message}")
+
+
+def log_error(message: str) -> None:
+    """Log error message."""
+    print(f"::error::{message}")
+
+
+def set_failed(message: str) -> None:
+    """Set action as failed."""
+    log_error(message)
+    sys.exit(1)
+
+
+def read_project_rules() -> str:
+    """Read project rules from RULE.mdc file.
+
+    Returns:
+        str: Project rules content or empty string if not found
+    """
+    workspace = os.environ.get("GITHUB_WORKSPACE", "")
+    if not workspace:
+        return ""
+
+    rules_path = Path(workspace) / ".cursor" / "rules" / "RULE.mdc"
+
+    try:
+        if rules_path.exists():
+            content = rules_path.read_text(encoding="utf-8")
+            log_info("Successfully loaded project rules from RULE.mdc")
+            return content
+    except Exception as e:
+        log_warning(f"Could not read RULE.mdc: {e}")
+
+    return ""
+
+
+def parse_diff_text(diff_text: str) -> list[dict[str, Any]]:
+    """Parse diff text into structured format.
+
+    Args:
+        diff_text(str): Unified diff text
+
+    Returns:
+        list[dict[str, Any]]: List of file changes with structure
+    """
+    patches = whatthepatch.parse_patch(diff_text)
+    files = []
+
+    for patch in patches:
+        if not patch.header or not patch.header.new_path:
+            continue
+
+        # Skip deleted files
+        if patch.header.new_path == "/dev/null":
+            continue
+
+        file_path = patch.header.new_path
+        if file_path.startswith("b/"):
+            file_path = file_path[2:]
+
+        # Collect added lines
+        added_lines = []
+        for change in patch.changes or []:
+            if change.old is None and change.new is not None:
+                # This is an added line
+                added_lines.append({"line": change.new, "content": change.line})
+
+        if added_lines:
+            files.append({"path": file_path, "patch": patch, "added_lines": added_lines})
+
+    return files
+
+
+def create_file_diff_context(file_data: dict[str, Any]) -> str:
+    """Create readable diff context for a file.
+
+    Args:
+        file_data(dict[str, Any]): File data with patch information
+
+    Returns:
+        str: Formatted diff context
+    """
+    patch = file_data["patch"]
+
+    # Build unified diff representation
+    diff_lines = []
+    for change in patch.changes or []:
+        if change.old is None and change.new is not None:
+            diff_lines.append(f"+{change.line}")
+        elif change.old is not None and change.new is None:
+            diff_lines.append(f"-{change.line}")
+        else:
+            diff_lines.append(f" {change.line}")
+
+    diff_text = "\n".join(diff_lines)
+
+    return f"""File: {file_data["path"]}
+Changes:
+```diff
+{diff_text}
+```
+"""
+
+
+def review_file_with_openai(
+    openai_client: OpenAI,
+    model: str,
+    system_message: str,
+    project_rules: str,
+    pr_title: str,
+    pr_body: str,
+    file_data: dict[str, Any],
+    debug: bool,
+) -> list[dict[str, Any]]:
+    """Review a file using OpenAI API with structured outputs.
+
+    Args:
+        openai_client(OpenAI): OpenAI client instance
+        model(str): Model name to use
+        system_message(str): System message with instructions
+        project_rules(str): Project-specific rules
+        pr_title(str): Pull request title
+        pr_body(str): Pull request body
+        file_data(dict[str, Any]): File data to review
+        debug(bool): Enable debug logging
+
+    Returns:
+        list[dict[str, Any]]: List of review comments
+    """
+    file_context = create_file_diff_context(file_data)
+
+    if debug:
+        log_info(f"Reviewing file: {file_data['path']}")
+
+    # Build system prompt
+    project_rules_section = ""
+    if project_rules:
+        project_rules_section = f"---\nPROJECT RULES:\n{project_rules}\n---\n"
+
+    full_system_message = f"""{system_message}
+
+{project_rules_section}
+
+INSTRUCTIONS:
+- Review the code changes and provide constructive feedback
+- Only suggest changes for lines that were ADDED (marked with + in the diff)
+- Line numbers must match the new file line numbers
+- If you want to provide a code suggestion, use markdown with ```suggestion blocks
+- Focus on: code quality, best practices, potential bugs, performance, security
+
+Example comment with suggestion:
+"Consider using const instead of let here:
+```suggestion
+const result = calculate();
+```"
+"""
+
+    try:
+        response = openai_client.beta.chat.completions.parse(
+            model=model,
+            messages=[
+                {"role": "system", "content": full_system_message},
+                {
+                    "role": "user",
+                    "content": f"Review this pull request change:\n\nPR Title: {pr_title}\nPR Description: {pr_body}\n\n{file_context}",
+                },
+            ],
+            temperature=0.1,
+            max_completion_tokens=2000,
+            response_format=CodeReview,
+        )
+
+        review = response.choices[0].message.parsed
+        if not review or not review.comments:
+            return []
+
+        if debug:
+            log_info(f"OpenAI response for {file_data['path']}: {len(review.comments)} comments")
+
+        # Validate and format comments
+        validated_comments = []
+        for comment in review.comments:
+            # Validate line number exists in added lines
+            valid_line = any(added["line"] == comment.line for added in file_data["added_lines"])
+
+            if valid_line:
+                validated_comments.append(
+                    {
+                        "path": comment.file,
+                        "line": comment.line,
+                        "body": comment.comment,
+                    }
+                )
+            elif debug:
+                log_warning(f"Line {comment.line} not found in added lines for {comment.file}")
+
+        return validated_comments
+
+    except Exception as e:
+        log_warning(f"Failed to review {file_data['path']}: {e}")
+        return []
+
+
+def main() -> None:
+    """Main entry point for the action."""
+    try:
+        # Get inputs
+        github_token = get_input("github_token", required=True)
+        openai_api_key = get_input("openai_api_key", required=True)
+        code_review_model = get_input("openai_code_review_model", default="gpt-4o")
+        additional_system_message = get_input("system_message", default="")
+        debug = get_input("debug", default="false").lower() == "true"
+
+        # Build system message with internalized default and optional append
+        base_system_message = """Você é um revisor sênior. Siga as REGRAS GERAIS do projeto em .cursor/rules/RULE.mdc.
+
+---
+REGRAS CRÍTICAS DE FORMATO:
+1. PROIBIDO: Nunca use blocos de código marcados como ```diff.
+2. OBRIGATÓRIO: Use exclusivamente o bloco ```suggestion para propor mudanças.
+3. O bloco de sugestão deve conter APENAS o código final que substituirá as linhas originais.
+
+EXEMPLO DE FORMATO CORRETO:
+```suggestion
+const soma = (a, b) => a + b;
+```
+
+4. Se não houver uma sugestão de código exata, apenas escreva o comentário em texto puro.
+5. Priorize as regras de arquitetura do arquivo RULE.mdc nas suas sugestões.
+6. Identifique problemas de segurança, performance, manutenibilidade e aderência às convenções do projeto.
+7. Seja construtivo e objetivo nas suas observações."""
+
+        # Append additional system message if provided
+        system_message = base_system_message
+        if additional_system_message.strip():
+            system_message = (
+                f"{base_system_message}\n\n---\nINSTRUÇÕES ADICIONAIS:\n{additional_system_message}"
+            )
+
+        # Get GitHub context
+        github_event_path = os.environ.get("GITHUB_EVENT_PATH")
+        if not github_event_path:
+            set_failed("GITHUB_EVENT_PATH not found")
+            return
+
+        with open(github_event_path, encoding="utf-8") as f:
+            event = json.load(f)
+
+        if "pull_request" not in event:
+            set_failed("This action can only be run on pull_request events")
+            return
+
+        pr_number = event["pull_request"]["number"]
+        pr_title = event["pull_request"]["title"]
+        pr_body = event["pull_request"].get("body", "")
+        repo_full_name = event["repository"]["full_name"]
+
+        if debug:
+            log_info(f"Reviewing PR #{pr_number}: {pr_title}")
+
+        # Initialize clients
+        auth = Auth.Token(github_token)
+        github_client = Github(auth=auth)
+
+        openai_client = OpenAI(api_key=openai_api_key, max_retries=2, timeout=60.0)
+
+        # Get repository and PR
+        repo = github_client.get_repo(repo_full_name)
+        pr = repo.get_pull(pr_number)
+
+        # Get PR diff
+        headers = {
+            "Authorization": f"token {github_token}",
+            "Accept": "application/vnd.github.v3.diff",
+        }
+        diff_response = requests.get(pr.url, headers=headers)
+        diff_text = diff_response.text
+
+        if not diff_text or not diff_text.strip():
+            log_info("No changes to review")
+            return
+
+        # Parse diff
+        files = parse_diff_text(diff_text)
+        if debug:
+            log_info(f"Found {len(files)} changed files")
+
+        if not files:
+            log_info("No files to review")
+            return
+
+        # Read project rules
+        project_rules = read_project_rules()
+
+        # Review each file
+        all_comments = []
+        for file_data in files:
+            comments = review_file_with_openai(
+                openai_client,
+                code_review_model,
+                system_message,
+                project_rules,
+                pr_title,
+                pr_body,
+                file_data,
+                debug,
+            )
+            all_comments.extend(comments)
+
+        # Post review comments
+        if all_comments:
+            if debug:
+                log_info(f"Posting {len(all_comments)} review comments")
+
+            # Get latest commit
+            commits = list(pr.get_commits())
+            latest_commit = commits[-1]
+
+            # Create review with comments
+            pr.create_review(
+                commit=latest_commit,
+                body="🤖 **Revisão de Código com IA**\n\nEncontrei alguns pontos que podem ser melhorados:",
+                event="COMMENT",
+                comments=all_comments,
+            )
+
+            log_info(f"✅ Posted {len(all_comments)} review comments")
+        else:
+            # Post general comment
+            pr.create_issue_comment(
+                "🤖 **Revisão de Código com IA**\n\n✅ Código revisado! Não encontrei problemas significativos."
+            )
+            log_info("✅ No issues found, posted general comment")
+
+    except Exception as e:
+        set_failed(str(e))
+
+
+if __name__ == "__main__":
+    main()
