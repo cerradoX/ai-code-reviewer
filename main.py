@@ -284,7 +284,7 @@ def main() -> None:
         # Get inputs
         github_token = get_input("github_token", required=True)
         openai_api_key = get_input("openai_api_key", required=True)
-        code_review_model = get_input("openai_code_review_model", default="gpt-4o")
+        code_review_model = get_input("openai_code_review_model", default="gpt-5.2")
         additional_system_message = get_input("system_message", default="")
         rules_file_path = get_input("rules_file_path", default=".cursor/rules/RULE.mdc")
         debug = get_input("debug", default="false").lower() == "true"
