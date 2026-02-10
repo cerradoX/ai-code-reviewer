@@ -1,0 +1,59 @@
+name: 'AI Code Reviewer'
+description: 'Reviews pull requests using OpenAI API and posts inline suggestions'
+author: 'Cerradox'
+
+inputs:
+  github_token:
+    description: 'GitHub token for API access'
+    required: true
+  openai_api_key:
+    description: 'OpenAI API key'
+    required: true
+  openai_code_review_model:
+    description: 'OpenAI model for detailed code review'
+    required: false
+    default: 'gpt-5.2'
+  system_message:
+    description: 'System message with review instructions'
+    required: false
+    default: 'You are a senior code reviewer. Provide constructive feedback and suggestions.'
+  debug:
+    description: 'Enable debug mode'
+    required: false
+    default: 'false'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Install uv
+      shell: bash
+      run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+    - name: Install dependencies
+      shell: bash
+      run: |
+        cd ${{ github.action_path }}
+        export PATH="$HOME/.local/bin:$PATH"
+        uv sync --frozen
+
+    - name: Run AI Code Reviewer
+      shell: bash
+      run: |
+        cd ${{ github.action_path }}
+        export PATH="$HOME/.local/bin:$PATH"
+        uv run python main.py
+      env:
+        INPUT_GITHUB_TOKEN: ${{ inputs.github_token }}
+        INPUT_OPENAI_API_KEY: ${{ inputs.openai_api_key }}
+        INPUT_OPENAI_CODE_REVIEW_MODEL: ${{ inputs.openai_code_review_model }}
+        INPUT_SYSTEM_MESSAGE: ${{ inputs.system_message }}
+        INPUT_DEBUG: ${{ inputs.debug }}
+
+branding:
+  icon: 'search'
+  color: 'blue'
