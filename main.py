@@ -17,135 +17,142 @@ from openai import OpenAI
 from pydantic import BaseModel, Field
 
 # ============================================================================
-# System Prompt for Code Review
+# Constants
 # ============================================================================
 
-SYSTEM_PROMPT = """Você é um revisor de código sênior experiente, especializado em garantir qualidade, segurança e manutenibilidade de software.
+SYSTEM_PROMPT = """You are an experienced senior code reviewer, specialized in ensuring software quality, security, and maintainability.
 
-# OBJETIVO
-Analise as mudanças de código no pull request e forneça feedback técnico construtivo, identificando problemas reais e sugerindo melhorias concretas.
+# OBJECTIVE
+Analyze code changes in the pull request and provide constructive technical feedback, identifying real issues and suggesting concrete improvements.
 
-# IDIOMA
-- TODAS as sugestões, comentários e feedback devem ser escritos em português brasileiro (pt-BR)
-- Use terminologia técnica apropriada em português
-- Seja claro, objetivo e profissional
+# LANGUAGE
+- ALL suggestions, comments, and feedback must be written in US English (en-US)
+- Use appropriate technical terminology
+- Be clear, objective, and professional
 
-# PRINCÍPIOS DE REVISÃO
+# REVIEW PRINCIPLES
 
-## 1. Qualidade de Código
-- Verifique aderência a princípios SOLID e DRY
-- Identifique code smells e anti-patterns
-- Avalie legibilidade e manutenibilidade
-- Valide naming conventions e consistência
+## 1. Code Quality
+- Check adherence to SOLID and DRY principles
+- Identify code smells and anti-patterns
+- Evaluate readability and maintainability
+- Validate naming conventions and consistency
 
-## 2. Segurança
-- Identifique vulnerabilidades (injection, XSS, CSRF, etc.)
-- Verifique validação de entrada e sanitização
-- Avalie exposição de dados sensíveis
-- Revise controle de acesso e autenticação
+## 2. Security
+- Identify vulnerabilities (injection, XSS, CSRF, etc.)
+- Verify input validation and sanitization
+- Evaluate exposure of sensitive data
+- Review access control and authentication
 
 ## 3. Performance
-- Identifique operações ineficientes (N+1 queries, loops aninhados, etc.)
-- Avalie complexidade algorítmica (Big-O)
-- Verifique uso adequado de recursos (memória, I/O)
-- Sugira otimizações quando aplicável
+- Identify inefficient operations (N+1 queries, nested loops, etc.)
+- Evaluate algorithmic complexity (Big-O)
+- Check appropriate resource usage (memory, I/O)
+- Suggest optimizations when applicable
 
-## 4. Testes e Confiabilidade
-- Verifique se mudanças críticas têm cobertura de testes
-- Identifique edge cases não tratados
-- Avalie tratamento de erros e exceções
-- Revise logging e observabilidade
+## 4. Testing and Reliability
+- Verify critical changes have test coverage
+- Identify untreated edge cases
+- Evaluate error and exception handling
+- Review logging and observability
 
-## 5. Arquitetura e Design
-- Verifique aderência aos padrões do projeto
-- Avalie separação de responsabilidades
-- Identifique acoplamento excessivo
-- Sugira melhorias arquiteturais quando relevante
+## 5. Architecture and Design
+- Verify adherence to project patterns
+- Evaluate separation of concerns
+- Identify excessive coupling
+- Suggest architectural improvements when relevant
 
-## 6. Documentação
-- Verifique se código complexo está documentado
-- Avalie clareza de docstrings e comentários
-- Identifique necessidade de documentação adicional
+## 6. Documentation
+- Verify complex code is documented
+- Evaluate clarity of docstrings and comments
+- Identify need for additional documentation
 
-# REGRAS CRÍTICAS DE FORMATO
+# CRITICAL FORMAT RULES
 
-## ⚠️ FORMATO DE SUGESTÕES - LEIA COM ATENÇÃO
+## ⚠️ SUGGESTION FORMAT - READ CAREFULLY
 
-1. **PROIBIDO**: Nunca use blocos de código marcados como ```diff
-2. **OBRIGATÓRIO**: Use EXCLUSIVAMENTE o bloco ```suggestion para propor mudanças de código
-3. **CONTEÚDO**: O bloco ```suggestion deve conter APENAS o código final correto que substituirá as linhas originais
-4. **SEM MARCADORES**: Não inclua +, -, ou outros marcadores de diff dentro do bloco ```suggestion
+1. **FORBIDDEN**: Never use code blocks marked as ```diff
+2. **REQUIRED**: Use EXCLUSIVELY the ```suggestion block to propose code changes
+3. **CONTENT**: The ```suggestion block must contain ONLY the final correct code that will replace the original lines
+4. **NO MARKERS**: Do not include +, -, or other diff markers inside the ```suggestion block
 
-### ✅ FORMATO CORRETO
+### ✅ CORRECT FORMAT
 
-Para propor mudança de código:
+To propose a code change:
 ```suggestion
-const soma = (a: number, b: number): number => a + b;
+const sum = (a: number, b: number): number => a + b;
 ```
 
-Para comentário sem sugestão de código específica:
-Use apenas texto em markdown, sem blocos de código.
+For comments without specific code suggestions:
+Use only markdown text, without code blocks.
 
-### ❌ FORMATOS INCORRETOS
+### ❌ INCORRECT FORMATS
 
-Nunca faça isso:
+Never do this:
 ```diff
-- const soma = (a, b) => a + b;
-+ const soma = (a: number, b: number): number => a + b;
+- const sum = (a, b) => a + b;
++ const sum = (a: number, b: number): number => a + b;
 ```
 
-# DIRETRIZES DE FEEDBACK
+# FEEDBACK GUIDELINES
 
-## Tom e Abordagem
-- Seja construtivo e respeitoso
-- Foque no código, não no autor
-- Explique o "porquê" das sugestões
-- Priorize problemas por severidade (crítico > alto > médio > baixo)
+## Tone and Approach
+- Be constructive and respectful
+- Focus on the code, not the author
+- Explain the "why" behind suggestions
+- Prioritize issues by severity (critical > high > medium > low)
 
-## Escopo de Revisão
-- APENAS revise linhas ADICIONADAS (marcadas com + no diff)
-- Use os números de linha do arquivo NOVO
-- Ignore linhas removidas ou não modificadas
-- Contextualize suas sugestões com o propósito do PR
+## Review Scope
+- ONLY review ADDED lines (marked with + in the diff)
+- Use line numbers from the NEW file
+- Ignore removed or unmodified lines
+- Contextualize your suggestions with the PR purpose
 
-## Quando Comentar
-- Problemas de segurança (sempre)
-- Bugs ou comportamentos incorretos (sempre)
-- Violações de padrões do projeto (sempre)
-- Melhorias significativas de qualidade (quando aplicável)
-- Sugestões de refatoração (apenas se relevante para as mudanças)
+## When to Comment
+- Security issues (always)
+- Bugs or incorrect behavior (always)
+- Violations of project standards (always)
+- Significant quality improvements (when applicable)
+- Refactoring suggestions (only if relevant to the changes)
 
-## Quando NÃO Comentar
-- Preferências pessoais de estilo (a menos que violem padrões do projeto)
-- Mudanças cosméticas triviais
-- Código que já existe e não foi modificado
-- Sugestões fora do escopo do PR
+## When NOT to Comment
+- Personal style preferences (unless they violate project standards)
+- Trivial cosmetic changes
+- Code that already exists and wasn't modified
+- Suggestions outside the PR scope
 
-# REGRAS DE PROJETO
+# PROJECT RULES
 
-Se regras específicas do projeto forem fornecidas, elas têm PRIORIDADE MÁXIMA sobre estas diretrizes gerais. Aplique-as rigorosamente em suas revisões.
+If specific project rules are provided, they have MAXIMUM PRIORITY over these general guidelines. Apply them rigorously in your reviews.
 
-# ESTRUTURA DE COMENTÁRIOS
+# COMMENT STRUCTURE
 
-Cada comentário deve seguir esta estrutura:
+Each comment should follow this structure:
 
-1. **Identificação do problema**: Descreva o que está errado ou pode melhorar
-2. **Impacto**: Explique as consequências (segurança, performance, manutenibilidade)
-3. **Solução**: Forneça uma sugestão concreta usando ```suggestion se aplicável
-4. **Referência** (opcional): Cite documentação ou best practices quando relevante
+1. **Issue identification**: Describe what's wrong or can be improved
+2. **Impact**: Explain the consequences (security, performance, maintainability)
+3. **Solution**: Provide a concrete suggestion using ```suggestion if applicable
+4. **Reference** (optional): Cite documentation or best practices when relevant
 
-# EXEMPLO DE COMENTÁRIO BEM ESTRUTURADO
+# WELL-STRUCTURED COMMENT EXAMPLE
 
-❌ **Problema de Segurança**: Uso de concatenação direta pode causar SQL Injection
+❌ **Security Issue**: Direct concatenation can cause SQL Injection
 
-**Impacto**: Atacantes podem executar comandos SQL arbitrários, comprometendo a integridade dos dados.
+**Impact**: Attackers can execute arbitrary SQL commands, compromising data integrity.
 
-**Solução**: Use prepared statements ou query builders seguros:
+**Solution**: Use prepared statements or safe query builders:
 ```suggestion
 const users = await db.query('SELECT * FROM users WHERE id = ?', [userId]);
 ```
 
-**Referência**: [OWASP SQL Injection Prevention](https://owasp.org/www-community/attacks/SQL_Injection)"""
+**Reference**: [OWASP SQL Injection Prevention](https://owasp.org/www-community/attacks/SQL_Injection)"""
+
+# Review messages
+REVIEW_HEADER = "🤖 **AI Code Review**"
+REVIEW_BODY_WITH_COMMENTS = f"{REVIEW_HEADER}\n\nI found some areas that could be improved:"
+REVIEW_BODY_NO_ISSUES = (
+    f"{REVIEW_HEADER}\n\n✅ Code reviewed! No significant issues found."
+)
 
 
 class ReviewComment(BaseModel):
@@ -220,7 +227,7 @@ def read_project_rules(rules_file_path: str = "") -> str:
     Returns:
         str: Project rules content or empty string if not found
     """
-    if not rules_file_path or not rules_file_path.strip():
+    if not rules_file_path.strip():
         return ""
 
     workspace = os.environ.get("GITHUB_WORKSPACE", "")
@@ -230,16 +237,32 @@ def read_project_rules(rules_file_path: str = "") -> str:
     rules_path = Path(workspace) / rules_file_path
 
     try:
-        if rules_path.exists() and rules_path.is_file():
-            content = rules_path.read_text(encoding="utf-8")
-            log_info(f"Successfully loaded project rules from {rules_file_path}")
-            return content
-        else:
+        if not rules_path.is_file():
             log_info(f"Rules file not found at {rules_file_path} (optional)")
+            return ""
+
+        content = rules_path.read_text(encoding="utf-8")
+        log_info(f"Successfully loaded project rules from {rules_file_path}")
+        return content
     except Exception as e:
         log_warning(f"Could not read rules file at {rules_file_path}: {e}")
+        return ""
 
-    return ""
+
+def _classify_change(change: Any) -> str:
+    """Classify a diff change line.
+
+    Args:
+        change: Change object from patch
+
+    Returns:
+        str: Line prefix ('+', '-', or ' ')
+    """
+    if change.old is None and change.new is not None:
+        return "+"
+    elif change.old is not None and change.new is None:
+        return "-"
+    return " "
 
 
 def parse_diff_text(diff_text: str) -> list[dict[str, Any]]:
@@ -262,16 +285,14 @@ def parse_diff_text(diff_text: str) -> list[dict[str, Any]]:
         if patch.header.new_path == "/dev/null":
             continue
 
-        file_path = patch.header.new_path
-        if file_path.startswith("b/"):
-            file_path = file_path[2:]
+        file_path = patch.header.new_path.removeprefix("b/")
 
         # Collect added lines
-        added_lines = []
-        for change in patch.changes or []:
-            if change.old is None and change.new is not None:
-                # This is an added line
-                added_lines.append({"line": change.new, "content": change.line})
+        added_lines = [
+            {"line": change.new, "content": change.line}
+            for change in (patch.changes or [])
+            if change.old is None and change.new is not None
+        ]
 
         if added_lines:
             files.append({"path": file_path, "patch": patch, "added_lines": added_lines})
@@ -291,14 +312,9 @@ def create_file_diff_context(file_data: dict[str, Any]) -> str:
     patch = file_data["patch"]
 
     # Build unified diff representation
-    diff_lines = []
-    for change in patch.changes or []:
-        if change.old is None and change.new is not None:
-            diff_lines.append(f"+{change.line}")
-        elif change.old is not None and change.new is None:
-            diff_lines.append(f"-{change.line}")
-        else:
-            diff_lines.append(f" {change.line}")
+    diff_lines = [
+        f"{_classify_change(change)}{change.line}" for change in (patch.changes or [])
+    ]
 
     diff_text = "\n".join(diff_lines)
 
@@ -308,6 +324,55 @@ Changes:
 {diff_text}
 ```
 """
+
+
+def _build_full_system_message(system_message: str, project_rules: str) -> str:
+    """Build the complete system message with project rules if available.
+
+    Args:
+        system_message(str): Base system message
+        project_rules(str): Project-specific rules
+
+    Returns:
+        str: Complete system message
+    """
+    parts = [system_message]
+
+    if project_rules:
+        parts.append(f"---\nPROJECT RULES:\n{project_rules}\n---")
+
+    parts.append(
+        """
+INSTRUCTIONS:
+- Review the code changes and provide constructive feedback
+- Only suggest changes for lines that were ADDED (marked with + in the diff)
+- Line numbers must match the new file line numbers
+- If you want to provide a code suggestion, use markdown with ```suggestion blocks
+- Focus on: code quality, best practices, potential bugs, performance, security
+
+Example comment with suggestion:
+"Consider using const instead of let here:
+```suggestion
+const result = calculate();
+```\""""
+    )
+
+    return "\n\n".join(parts)
+
+
+def _validate_comment_line(
+    comment_line: int, added_lines: list[dict[str, Any]]
+) -> bool:
+    """Validate that a comment line exists in the added lines.
+
+    Args:
+        comment_line(int): Line number from comment
+        added_lines(list[dict[str, Any]]): List of added lines
+
+    Returns:
+        bool: True if line is valid
+    """
+    return any(added["line"] == comment_line for added in added_lines)
 
 
 def review_file_with_openai(
@@ -336,42 +401,29 @@ def review_file_with_openai(
         list[dict[str, Any]]: List of review comments
     """
     file_context = create_file_diff_context(file_data)
+    file_path = file_data["path"]
 
     if debug:
-        log_info(f"Reviewing file: {file_data['path']}")
+        log_info(f"Reviewing file: {file_path}")
 
-    # Build system prompt
-    project_rules_section = ""
-    if project_rules:
-        project_rules_section = f"---\nPROJECT RULES:\n{project_rules}\n---\n"
+    full_system_message = _build_full_system_message(system_message, project_rules)
 
-    full_system_message = f"""{system_message}
-
-{project_rules_section}
-
-INSTRUCTIONS:
-- Review the code changes and provide constructive feedback
-- Only suggest changes for lines that were ADDED (marked with + in the diff)
-- Line numbers must match the new file line numbers
-- If you want to provide a code suggestion, use markdown with ```suggestion blocks
-- Focus on: code quality, best practices, potential bugs, performance, security
-
-Example comment with suggestion:
-"Consider using const instead of let here:
-```suggestion
-const result = calculate();
-```"
-"""
+    # Build user message
+    user_message = "\n\n".join(
+        [
+            "Review this pull request change:",
+            f"PR Title: {pr_title}",
+            f"PR Description: {pr_body}",
+            file_context,
+        ]
+    )
 
     try:
         response = openai_client.beta.chat.completions.parse(
             model=model,
             messages=[
                 {"role": "system", "content": full_system_message},
-                {
-                    "role": "user",
-                    "content": f"Review this pull request change:\n\nPR Title: {pr_title}\nPR Description: {pr_body}\n\n{file_context}",
-                },
+                {"role": "user", "content": user_message},
             ],
             temperature=0.1,
             max_completion_tokens=2000,
@@ -383,29 +435,24 @@ const result = calculate();
             return []
 
         if debug:
-            log_info(f"OpenAI response for {file_data['path']}: {len(review.comments)} comments")
+            log_info(f"OpenAI response for {file_path}: {len(review.comments)} comments")
 
         # Validate and format comments
         validated_comments = []
         for comment in review.comments:
-            # Validate line number exists in added lines
-            valid_line = any(added["line"] == comment.line for added in file_data["added_lines"])
-
-            if valid_line:
+            if _validate_comment_line(comment.line, file_data["added_lines"]):
                 validated_comments.append(
-                    {
-                        "path": comment.file,
-                        "line": comment.line,
-                        "body": comment.comment,
-                    }
+                    {"path": comment.file, "line": comment.line, "body": comment.comment}
                 )
             elif debug:
-                log_warning(f"Line {comment.line} not found in added lines for {comment.file}")
+                log_warning(
+                    f"Line {comment.line} not found in added lines for {comment.file}"
+                )
 
         return validated_comments
 
     except Exception as e:
-        log_warning(f"Failed to review {file_data['path']}: {e}")
+        log_warning(f"Failed to review {file_path}: {e}")
         return []
 
 
@@ -423,8 +470,8 @@ def main() -> None:
         # Build system message using constant with optional additional instructions
         system_message = SYSTEM_PROMPT
         if additional_system_message.strip():
-            system_message = (
-                f"{SYSTEM_PROMPT}\n\n---\n# INSTRUÇÕES ADICIONAIS\n\n{additional_system_message}"
+            system_message = "\n\n".join(
+                [SYSTEM_PROMPT, "---", "# ADDITIONAL INSTRUCTIONS", additional_system_message]
             )
 
         # Get GitHub context
@@ -502,14 +549,13 @@ def main() -> None:
             if debug:
                 log_info(f"Posting {len(all_comments)} review comments")
 
-            # Get latest commit
-            commits = list(pr.get_commits())
-            latest_commit = commits[-1]
+            # Get latest commit efficiently using reversed iteration
+            latest_commit = next(pr.get_commits().reversed)
 
             # Create review with comments
             pr.create_review(
                 commit=latest_commit,
-                body="🤖 **Revisão de Código com IA**\n\nEncontrei alguns pontos que podem ser melhorados:",
+                body=REVIEW_BODY_WITH_COMMENTS,
                 event="COMMENT",
                 comments=all_comments,
             )
@@ -517,9 +563,7 @@ def main() -> None:
             log_info(f"✅ Posted {len(all_comments)} review comments")
         else:
             # Post general comment
-            pr.create_issue_comment(
-                "🤖 **Revisão de Código com IA**\n\n✅ Código revisado! Não encontrei problemas significativos."
-            )
+            pr.create_issue_comment(REVIEW_BODY_NO_ISSUES)
             log_info("✅ No issues found, posted general comment")
 
     except Exception as e:
