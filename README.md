@@ -67,6 +67,7 @@ jobs:
 | `system_message` | Não | - | Mensagem de sistema customizada com instruções de revisão |
 | `debug` | Não | `false` | Habilita logs de debug |
 | `post_initial_comment` | Não | `true` | Posta comentário inicial notificando o início da revisão |
+| `rules_file_path` | Não | `.cursor/rules/RULE.mdc` | Caminho relativo para arquivo de regras do projeto (opcional) |
 
 ## Configuração de Secrets
 
@@ -90,9 +91,33 @@ Para usar em múltiplos repositórios:
 
 ## Regras do Projeto
 
-A action procura automaticamente por regras do projeto em `.cursor/rules/RULE.mdc` no repositório sendo revisado. Se encontrado, o conteúdo é incluído no contexto da revisão para garantir que as sugestões sigam as convenções do projeto.
+A action pode carregar regras específicas do projeto para incluir no contexto da revisão. Por padrão, procura por `.cursor/rules/RULE.mdc` no repositório, mas o caminho é **configurável e opcional**.
 
-### Exemplo de RULE.mdc
+### Configurar Caminho Customizado
+
+```yaml
+- name: AI Code Review
+  uses: cerradoX/ai-code-reviewer@v1.0.0
+  with:
+    github_token: ${{ secrets.GITHUB_TOKEN }}
+    openai_api_key: ${{ secrets.OPENAI_API_KEY }}
+    rules_file_path: "docs/code-review-rules.md"  # Caminho customizado
+```
+
+### Desabilitar Carregamento de Regras
+
+Para não carregar nenhum arquivo de regras:
+
+```yaml
+- name: AI Code Review
+  uses: cerradoX/ai-code-reviewer@v1.0.0
+  with:
+    github_token: ${{ secrets.GITHUB_TOKEN }}
+    openai_api_key: ${{ secrets.OPENAI_API_KEY }}
+    rules_file_path: ""  # Vazio = não carregar regras
+```
+
+### Exemplo de Arquivo de Regras
 
 ```markdown
 # Regras do Projeto
@@ -107,6 +132,8 @@ A action procura automaticamente por regras do projeto em `.cursor/rules/RULE.md
 - Controllers apenas para roteamento
 - Usar DTOs para validação de entrada
 ```
+
+> **Nota**: Se o arquivo não existir, a action continua normalmente sem ele. O arquivo é sempre opcional.
 
 ## Desenvolvimento
 

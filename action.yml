@@ -25,6 +25,10 @@ inputs:
     description: 'Post initial comment to PR notifying review has started'
     required: false
     default: 'true'
+  rules_file_path:
+    description: 'Path to project rules file (relative to repository root). Optional.'
+    required: false
+    default: '.cursor/rules/RULE.mdc'
 
 runs:
   using: 'composite'
@@ -66,6 +70,7 @@ runs:
         INPUT_OPENAI_CODE_REVIEW_MODEL: ${{ inputs.openai_code_review_model }}
         INPUT_SYSTEM_MESSAGE: ${{ inputs.system_message }}
         INPUT_DEBUG: ${{ inputs.debug }}
+        INPUT_RULES_FILE_PATH: ${{ inputs.rules_file_path }}
 
 branding:
   icon: 'search'
