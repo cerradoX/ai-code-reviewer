@@ -79,25 +79,34 @@ def set_failed(message: str) -> None:
     sys.exit(1)
 
 
-def read_project_rules() -> str:
-    """Read project rules from RULE.mdc file.
+def read_project_rules(rules_file_path: str = "") -> str:
+    """Read project rules from a configurable file path.
+
+    Args:
+        rules_file_path(str): Relative path to rules file from workspace root.
+                              If empty, no rules are loaded. Defaults to "".
 
     Returns:
         str: Project rules content or empty string if not found
     """
+    if not rules_file_path or not rules_file_path.strip():
+        return ""
+
     workspace = os.environ.get("GITHUB_WORKSPACE", "")
     if not workspace:
         return ""
 
-    rules_path = Path(workspace) / ".cursor" / "rules" / "RULE.mdc"
+    rules_path = Path(workspace) / rules_file_path
 
     try:
-        if rules_path.exists():
+        if rules_path.exists() and rules_path.is_file():
             content = rules_path.read_text(encoding="utf-8")
-            log_info("Successfully loaded project rules from RULE.mdc")
+            log_info(f"Successfully loaded project rules from {rules_file_path}")
             return content
+        else:
+            log_info(f"Rules file not found at {rules_file_path} (optional)")
     except Exception as e:
-        log_warning(f"Could not read RULE.mdc: {e}")
+        log_warning(f"Could not read rules file at {rules_file_path}: {e}")
 
     return ""
 
@@ -277,10 +286,11 @@ def main() -> None:
         openai_api_key = get_input("openai_api_key", required=True)
         code_review_model = get_input("openai_code_review_model", default="gpt-4o")
         additional_system_message = get_input("system_message", default="")
+        rules_file_path = get_input("rules_file_path", default=".cursor/rules/RULE.mdc")
         debug = get_input("debug", default="false").lower() == "true"
 
         # Build system message with internalized default and optional append
-        base_system_message = """Você é um revisor sênior. Siga as REGRAS GERAIS do projeto em .cursor/rules/RULE.mdc.
+        base_system_message = """Você é um revisor sênior. Se regras de projeto forem fornecidas, siga-as rigorosamente.
 
 ---
 REGRAS CRÍTICAS DE FORMATO:
@@ -294,7 +304,7 @@ const soma = (a, b) => a + b;
 ```
 
 4. Se não houver uma sugestão de código exata, apenas escreva o comentário em texto puro.
-5. Priorize as regras de arquitetura do arquivo RULE.mdc nas suas sugestões.
+5. Priorize as regras de arquitetura fornecidas nas suas sugestões.
 6. Identifique problemas de segurança, performance, manutenibilidade e aderência às convenções do projeto.
 7. Seja construtivo e objetivo nas suas observações."""
 
@@ -358,7 +368,7 @@ const soma = (a, b) => a + b;
             return
 
         # Read project rules
-        project_rules = read_project_rules()
+        project_rules = read_project_rules(rules_file_path)
 
         # Review each file
         all_comments = []
