@@ -38,7 +38,7 @@ runs:
       shell: bash
       run: |
         gh pr comment ${{ github.event.pull_request.number }} \
-          --body "🤖 **IA Agent:** Iniciando a revisão do seu código... Aguarde as sugestões."
+          --body "🤖 **AI Agent:** Starting code review... Please wait for suggestions."
       env:
         GITHUB_TOKEN: ${{ inputs.github_token }}
 

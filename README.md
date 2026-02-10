@@ -1,52 +1,52 @@
 # AI Code Reviewer Action
 
-GitHub Action customizada que usa a API da OpenAI para revisar pull requests e fornecer sugestões inline.
+Custom GitHub Action that uses OpenAI API to review pull requests and provide inline suggestions.
 
-## Status do Projeto
+## Project Status
 
-**Versão:** 1.0.0
-**Status:** ✅ Funcional e pronto para uso
-**Última atualização:** 10 de Fevereiro de 2026
+**Version:** 1.0.0
+**Status:** ✅ Functional and ready to use
+**Last updated:** February 10, 2026
 
-### Funcionalidades Implementadas
+### Implemented Features
 
-- ✅ Revisão automatizada de código usando OpenAI API (gpt-5.2)
-- ✅ Comentários inline em pull requests com blocos de sugestão
-- ✅ Suporte a arquivo de regras configurável (`.cursor/rules/RULE.mdc` ou customizado)
-- ✅ Notificação inicial automática ao iniciar revisão (configurável)
-- ✅ Parsing de diffs com `whatthepatch`
-- ✅ Validação de linhas adicionadas para comentários precisos
-- ✅ Structured outputs com Pydantic para respostas consistentes
-- ✅ Logs informativos e modo debug
-- ✅ Gerenciamento de dependências com `uv`
-- ✅ Suporte a Python 3.12+
+- ✅ Automated code review using OpenAI API (gpt-5.2)
+- ✅ Inline comments on pull requests with suggestion blocks
+- ✅ Configurable rules file support (`.cursor/rules/RULE.mdc` or custom)
+- ✅ Automatic initial notification when starting review (configurable)
+- ✅ Diff parsing with `whatthepatch`
+- ✅ Added lines validation for accurate comments
+- ✅ Structured outputs with Pydantic for consistent responses
+- ✅ Informative logs and debug mode
+- ✅ Dependency management with `uv`
+- ✅ Python 3.12+ support
 
-### Tecnologias
+### Technologies
 
 - **Python:** 3.12+
-- **Gerenciamento de Dependências:** uv
+- **Dependency Management:** uv
 - **APIs:** OpenAI API, GitHub API
-- **Bibliotecas principais:**
-  - `PyGithub` (2.5.0+) - Interação com GitHub API
-  - `openai` (2.18.0) - Cliente OpenAI com structured outputs
-  - `whatthepatch` (1.0.6+) - Parsing de diffs
-  - `pydantic` (2.10.6+) - Validação e estruturação de dados
+- **Main Libraries:**
+  - `PyGithub` (2.5.0+) - GitHub API interaction
+  - `openai` (2.18.0) - OpenAI client with structured outputs
+  - `whatthepatch` (1.0.6+) - Diff parsing
+  - `pydantic` (2.10.6+) - Data validation and structuring
 
-## Características
+## Features
 
-- 🤖 Revisa diffs de pull requests usando modelos GPT da OpenAI
-- 💬 Posta comentários inline com sugestões
-- 📋 Lê e segue regras específicas do projeto (configurável e opcional)
-- ✨ Suporta blocos de sugestão do GitHub para mudanças fáceis de código
-- 🎯 Foco em: qualidade de código, melhores práticas, bugs potenciais, performance e segurança
-- 🔔 Notificação inicial automática (pode ser desabilitada)
-- 🛠️ Sistema de mensagens customizáveis e extensível
+- 🤖 Reviews pull request diffs using OpenAI GPT models
+- 💬 Posts inline comments with suggestions
+- 📋 Reads and follows project-specific rules (configurable and optional)
+- ✨ Supports GitHub suggestion blocks for easy code changes
+- 🎯 Focus on: code quality, best practices, potential bugs, performance, and security
+- 🔔 Automatic initial notification (can be disabled)
+- 🛠️ Customizable and extensible messaging system
 
-## Uso
+## Usage
 
-### Configuração Básica
+### Basic Configuration
 
-Adicione este workflow no seu repositório em `.github/workflows/ai-code-review.yaml`:
+Add this workflow to your repository in `.github/workflows/ai-code-review.yaml`:
 
 ```yaml
 name: AI Code Review
@@ -73,7 +73,7 @@ jobs:
           openai_api_key: ${{ secrets.OPENAI_API_KEY }}
 ```
 
-### Configuração com Opções Personalizadas
+### Configuration with Custom Options
 
 ```yaml
 - name: AI Code Review
@@ -83,62 +83,49 @@ jobs:
     openai_api_key: ${{ secrets.OPENAI_API_KEY }}
     openai_code_review_model: 'gpt-5.2'
     system_message: |
-      Você é um revisor especialista em segurança.
-      Foque especialmente em vulnerabilidades e práticas de segurança.
+      You are a security expert reviewer.
+      Focus especially on vulnerabilities and security practices.
     debug: 'false'
-    post_initial_comment: 'true'  # Opcional: desabilite para não postar comentário inicial
+    post_initial_comment: 'true'  # Optional: disable to not post initial comment
 ```
 
 ## Inputs
 
-| Input | Obrigatório | Padrão | Descrição |
-|-------|-------------|--------|-----------|
-| `github_token` | Sim | - | Token do GitHub para acesso à API |
-| `openai_api_key` | Sim | - | Chave da API OpenAI |
-| `openai_code_review_model` | Não | `gpt-5.2` | Modelo para revisão detalhada |
-| `system_message` | Não | - | Mensagem de sistema customizada com instruções de revisão |
-| `debug` | Não | `false` | Habilita logs de debug |
-| `post_initial_comment` | Não | `true` | Posta comentário inicial notificando o início da revisão |
-| `rules_file_path` | Não | `.cursor/rules/RULE.mdc` | Caminho relativo para arquivo de regras do projeto (opcional) |
+| Input                      | Required | Default                  | Description                                           |
+|----------------------------|----------|--------------------------|-------------------------------------------------------|
+| `github_token`             | Yes      | -                        | GitHub token for API access                           |
+| `openai_api_key`           | Yes      | -                        | OpenAI API key                                        |
+| `openai_code_review_model` | No       | `gpt-5.2`                | Model for detailed review                             |
+| `system_message`           | No       | -                        | Custom system message with review instructions        |
+| `debug`                    | No       | `false`                  | Enable debug logs                                     |
+| `post_initial_comment`     | No       | `true`                   | Post initial comment notifying review start           |
+| `rules_file_path`          | No       | `.cursor/rules/RULE.mdc` | Relative path to project rules file (optional)        |
 
-## Configuração de Secrets
+## Secrets Configuration
 
-### Em Nível de Organização (Recomendado)
+### Organization Level (Recommended)
 
-Para usar em múltiplos repositórios:
+To use across multiple repositories:
 
-1. Vá em **Organization Settings** → **Secrets and variables** → **Actions**
-2. Clique em **New organization secret**
-3. Adicione:
-   - `OPENAI_API_KEY`: Sua chave da API OpenAI
-4. Configure o acesso aos repositórios que devem usar a action
+1. Go to **Organization Settings** → **Secrets and variables** → **Actions**
+2. Click **New organization secret**
+3. Add:
+   - `OPENAI_API_KEY`: Your OpenAI API key
+4. Configure access to repositories that should use the action
 
-### Em Nível de Repositório
+### Repository Level
 
-1. Vá em **Settings** → **Secrets and variables** → **Actions**
-2. Clique em **New repository secret**
-3. Adicione `OPENAI_API_KEY` com sua chave da API OpenAI
+1. Go to **Settings** → **Secrets and variables** → **Actions**
+2. Click **New repository secret**
+3. Add `OPENAI_API_KEY` with your OpenAI API key
 
-> **Nota**: O `GITHUB_TOKEN` é fornecido automaticamente pelo GitHub Actions.
+> **Note**: The `GITHUB_TOKEN` is automatically provided by GitHub Actions.
 
-## Regras do Projeto
+## Project Rules
 
-A action pode carregar regras específicas do projeto para incluir no contexto da revisão. Por padrão, procura por `.cursor/rules/RULE.mdc` no repositório, mas o caminho é **configurável e opcional**.
+The action can load project-specific rules to include in the review context. By default, it looks for `.cursor/rules/RULE.mdc` in the repository, but the path is **configurable and optional**.
 
-### Configurar Caminho Customizado
-
-```yaml
-- name: AI Code Review
-  uses: cerradoX/ai-code-reviewer@v1.0.0
-  with:
-    github_token: ${{ secrets.GITHUB_TOKEN }}
-    openai_api_key: ${{ secrets.OPENAI_API_KEY }}
-    rules_file_path: "docs/code-review-rules.md"  # Caminho customizado
-```
-
-### Desabilitar Carregamento de Regras
-
-Para não carregar nenhum arquivo de regras:
+### Configure Custom Path
 
 ```yaml
 - name: AI Code Review
@@ -146,97 +133,110 @@ Para não carregar nenhum arquivo de regras:
   with:
     github_token: ${{ secrets.GITHUB_TOKEN }}
     openai_api_key: ${{ secrets.OPENAI_API_KEY }}
-    rules_file_path: ""  # Vazio = não carregar regras
+    rules_file_path: "docs/code-review-rules.md"  # Custom path
 ```
 
-### Exemplo de Arquivo de Regras
+### Disable Rules Loading
+
+To not load any rules file:
+
+```yaml
+- name: AI Code Review
+  uses: cerradoX/ai-code-reviewer@v1.0.0
+  with:
+    github_token: ${{ secrets.GITHUB_TOKEN }}
+    openai_api_key: ${{ secrets.OPENAI_API_KEY }}
+    rules_file_path: ""  # Empty = don't load rules
+```
+
+### Example Rules File
 
 ```markdown
-# Regras do Projeto
+# Project Rules
 
-## Estilo de Código
-- Use TypeScript estrito
-- Preferir const sobre let
-- Usar arrow functions para callbacks
+## Code Style
+- Use strict TypeScript
+- Prefer const over let
+- Use arrow functions for callbacks
 
-## Arquitetura
-- Separar lógica de negócio em services
-- Controllers apenas para roteamento
-- Usar DTOs para validação de entrada
+## Architecture
+- Separate business logic in services
+- Controllers only for routing
+- Use DTOs for input validation
 ```
 
-> **Nota**: Se o arquivo não existir, a action continua normalmente sem ele. O arquivo é sempre opcional.
+> **Note**: If the file doesn't exist, the action continues normally without it. The file is always optional.
 
-## Desenvolvimento
+## Development
 
-### Setup Local
+### Local Setup
 
 ```bash
-# Clone o repositório
+# Clone the repository
 git clone git@github.com:cerradoX/ai-code-reviewer.git
 cd ai-code-reviewer
 
-# Instale uv se ainda não tiver
+# Install uv if you don't have it yet
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Crie o ambiente virtual e instale dependências
+# Create virtual environment and install dependencies
 uv sync
 ```
 
-### Estrutura do Projeto
+### Project Structure
 
 ```
 ai-code-reviewer/
-├── main.py                 # Script principal da action
-├── action.yml              # Definição da GitHub Action
-├── pyproject.toml          # Configuração do projeto e dependências
-├── uv.lock                 # Lock file de dependências
+├── main.py                 # Main action script
+├── action.yml              # GitHub Action definition
+├── pyproject.toml          # Project configuration and dependencies
+├── uv.lock                 # Dependencies lock file
 ├── .github/
 │   └── workflows/
-│       └── example.yaml    # Exemplo de workflow
+│       └── example.yaml    # Workflow example
 ├── LICENSE
 └── README.md
 ```
 
-### Atualizar Dependências
+### Update Dependencies
 
 ```bash
-# Adicionar nova dependência
-uv add nome-do-pacote
+# Add new dependency
+uv add package-name
 
-# Atualizar dependências
+# Update dependencies
 uv lock --upgrade
 
-# Remover dependência
-uv remove nome-do-pacote
+# Remove dependency
+uv remove package-name
 ```
 
-### Testar Localmente
+### Test Locally
 
-Você pode testar a action localmente configurando variáveis de ambiente:
+You can test the action locally by setting environment variables:
 
 ```bash
-export INPUT_GITHUB_TOKEN="seu_token"
-export INPUT_OPENAI_API_KEY="sua_chave"
+export INPUT_GITHUB_TOKEN="your_token"
+export INPUT_OPENAI_API_KEY="your_key"
 export INPUT_OPENAI_CODE_REVIEW_MODEL="gpt-5.2"
 export INPUT_DEBUG="true"
-export GITHUB_EVENT_PATH="caminho/para/event.json"
-export GITHUB_WORKSPACE="caminho/para/workspace"
+export GITHUB_EVENT_PATH="path/to/event.json"
+export GITHUB_WORKSPACE="path/to/workspace"
 
 uv run python main.py
 ```
 
-## Versionamento
+## Versioning
 
-Para usar uma versão específica da action:
+To use a specific version of the action:
 
 ```yaml
-uses: cerradoX/ai-code-reviewer@v1.0.0  # Tag específica
-uses: cerradoX/ai-code-reviewer@main    # Branch main (mais recente)
-uses: cerradoX/ai-code-reviewer@abc123  # Commit específico
+uses: cerradoX/ai-code-reviewer@v1.0.0  # Specific tag
+uses: cerradoX/ai-code-reviewer@main    # Main branch (latest)
+uses: cerradoX/ai-code-reviewer@abc123  # Specific commit
 ```
 
-## Exemplo de Workflow Completo
+## Complete Workflow Example
 
 ```yaml
 name: AI Code Review
@@ -263,13 +263,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Avisar início da revisão
-        run: |
-          gh pr comment ${{ github.event.pull_request.number }} \
-            --body "🤖 **IA Agent:** Iniciando a revisão do seu código... Aguarde as sugestões."
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: AI Code Review
         uses: cerradoX/ai-code-reviewer@main
         with:
@@ -281,36 +274,36 @@ jobs:
 
 ## Troubleshooting
 
-### A action não está postando comentários
+### Action is not posting comments
 
-- Verifique se as permissões `pull-requests: write` estão configuradas
-- Confirme que o `OPENAI_API_KEY` está configurado corretamente
-- Habilite `debug: 'true'` para ver logs detalhados
+- Check if `pull-requests: write` permissions are configured
+- Confirm that `OPENAI_API_KEY` is configured correctly
+- Enable `debug: 'true'` to see detailed logs
 
-### Comentários aparecem em linhas erradas
+### Comments appear on wrong lines
 
-- A action só comenta em linhas que foram **adicionadas** (marcadas com `+` no diff)
-- Certifique-se de que o modelo está retornando números de linha válidos
+- The action only comments on lines that were **added** (marked with `+` in the diff)
+- Make sure the model is returning valid line numbers
 
-### Rate limits da OpenAI
+### OpenAI rate limits
 
-- Considere adicionar delays entre chamadas para PRs muito grandes
-- Use um modelo mais rápido se necessário (ex: `gpt-3.5-turbo`)
+- Consider adding delays between calls for very large PRs
+- Use a faster model if necessary (e.g., `gpt-3.5-turbo`)
 
-## Contribuindo
+## Contributing
 
-Contribuições são bem-vindas! Por favor:
+Contributions are welcome! Please:
 
-1. Faça fork do repositório
-2. Crie uma branch para sua feature (`git checkout -b feature/nova-feature`)
-3. Commit suas mudanças (`git commit -m 'Adiciona nova feature'`)
-4. Push para a branch (`git push origin feature/nova-feature`)
-5. Abra um Pull Request
+1. Fork the repository
+2. Create a branch for your feature (`git checkout -b feature/new-feature`)
+3. Commit your changes (`git commit -m 'Add new feature'`)
+4. Push to the branch (`git push origin feature/new-feature`)
+5. Open a Pull Request
 
-## Licença
+## License
 
 MIT
 
-## Suporte
+## Support
 
-Para problemas ou dúvidas, abra uma issue no repositório.
+For issues or questions, open an issue in the repository.
