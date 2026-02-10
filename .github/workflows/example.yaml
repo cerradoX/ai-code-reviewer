@@ -1,29 +1,88 @@
+# Workflow name displayed in the GitHub Actions interface
 name: AI Code Review
 
+# Event that triggers the workflow
 on:
+  # Runs when a pull request is created or modified
   pull_request:
+    # Target branches of the PR that trigger the workflow
     branches:
       - main
+    # PR event types that trigger the workflow
+    # opened: when the PR is created for the first time
+    # reopened: when a closed PR is reopened
     types: [opened, reopened]
 
+# Concurrency control to prevent multiple simultaneous executions
 concurrency:
+  # Unique concurrency group per repository, PR number, and workflow
+  # Ensures only one execution per PR occurs at a time
   group: ${{ github.repository }}-${{ github.event.pull_request.number }}-${{ github.workflow }}
+  # Cancels in-progress runs when a new one is triggered
   cancel-in-progress: true
 
+# Permissions required for the workflow to execute
 permissions:
+  # Read permission to access repository code
   contents: read
+  # Write permission to comment on pull requests
   pull-requests: write
 
+# Definition of jobs to be executed
 jobs:
+  # Code review job
   review:
+    # Operating system where the job will run
     runs-on: ubuntu-latest
+    # Sequence of steps to be executed in the job
     steps:
+      # First step: checkout the PR code
       - name: Checkout
+        # Official GitHub action to checkout the repository
         uses: actions/checkout@v4
 
+      # Second step: execute AI code review
       - name: AI Code Review
-        uses: cerradoX/ai-code-reviewer@main
+        # Custom action for AI-powered code review
+        uses: cerradoX/ai-code-reviewer@v1.0.0
+        # Input parameters for the action
         with:
+          # ========================================
+          # REQUIRED PARAMETERS
+          # ========================================
+
+          # GitHub authentication token (automatically provided by GitHub Actions)
           github_token: ${{ secrets.GITHUB_TOKEN }}
+
+          # OpenAI API key (stored as a secret in the repository)
+          # To create: Repository Settings > Secrets and variables > Actions > New repository secret
           openai_api_key: ${{ secrets.OPENAI_API_KEY }}
+
+          # ========================================
+          # OPTIONAL PARAMETERS
+          # ========================================
+
+          # OpenAI model to use for code review
+          # Default: 'gpt-5.2'
+          # Options: 'gpt-4o', 'gpt-4', 'gpt-3.5-turbo', 'gpt-5.2', etc.
           openai_code_review_model: "gpt-5.2"
+
+          # System message with review instructions for the AI
+          # Default: 'You are a senior code reviewer. Provide constructive feedback and suggestions.'
+          # Customize this to define specific review criteria or coding standards
+          system_message: "You are a senior code reviewer. Provide constructive feedback and suggestions."
+
+          # Enable debug mode for verbose logging
+          # Default: 'false'
+          # Options: 'true' or 'false'
+          debug: "false"
+
+          # Post initial comment to PR notifying that review has started
+          # Default: 'true'
+          # Options: 'true' or 'false'
+          post_initial_comment: "true"
+
+          # Path to project rules file (relative to repository root)
+          # Default: '.cursor/rules/RULE.mdc'
+          # Use this to provide custom coding standards, contexts, guidelines, or rules for the AI reviewer
+          rules_file_path: ".cursor/rules/RULE.mdc"
